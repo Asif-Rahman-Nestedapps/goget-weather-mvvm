@@ -14,8 +14,9 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
     @IBOutlet weak var weatherTableView: UITableView!
     private var webservice :WebService!
     private var weatherListViewModel :WeatherListViewModel!
-    
+    private var isMorePressed :Bool!
 
+    //MARK:- View Life Cycle
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(true)
         
@@ -23,12 +24,12 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        isMorePressed = false;
         weatherTableView.layer.shadowColor = UIColor.black.cgColor
         weatherTableView.layer.shadowOpacity = 0.5
         weatherTableView.layer.shadowOffset = CGSize(width: 0, height: 0)
         weatherTableView.layer.shadowRadius = 1
-        
+        weatherTableView.backgroundColor = UIColor.clear
         weatherTableView.rowHeight = UITableView.automaticDimension;
         weatherTableView.estimatedRowHeight = 80.0
         weatherTableView.separatorStyle = UITableViewCell.SeparatorStyle.none
@@ -42,6 +43,8 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
                 weatherTableView.register(cellNib, forCellReuseIdentifier: "WeatherTableViewCell")
         updateUI()
     }
+    
+    //MARK:- UI Update Methods
     private func updateUI() {
         
         DispatchQueue.main.async {
@@ -67,9 +70,9 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
         }
     }
 
+
     func setBgColorAccordingToWeather(weatherStatus:String) -> UIColor {
         let weatherStatus = weatherStatus.lowercased();
-        
         switch "true" {
         case (String(weatherStatus.contains("cloud") || weatherStatus == "cloud")):
             return UIColor.init(red:126/255 , green: 135/255, blue: 150/255, alpha: 1.0)
@@ -82,14 +85,23 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
         case (String(weatherStatus.contains("wind") || weatherStatus == "wind")):
             headerLabel.textColor = UIColor.black
             return UIColor.init(red:155.0/255, green: 155/255, blue: 155/255, alpha: 1.0)
+        case (String(weatherStatus.contains("fog") || weatherStatus == "fog")):
+            headerLabel.textColor = UIColor.black
+            return UIColor.init(red:220/255, green: 237/255, blue: 200/255, alpha: 1.0)
 
         default:
             return UIColor.init(red:155.0/255, green: 155/255, blue: 155/255, alpha: 1.0)
         }
     }
 
+    //MARK:- UITableViewDataSource and Delegate
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.weatherListViewModel.sourceViewModels.count;
+        if section==0 {
+            return 3;
+        }else{
+            return self.weatherListViewModel.sourceViewModels.count;
+        }
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -97,8 +109,29 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
         guard let weatherCell = cell as? WeatherTableViewCell else {
             return cell
         }
-        weatherCell.dateLabel.text  = stringFromDate(date: Calendar.current.date(byAdding: Calendar.Component.day, value: indexPath.row, to: Date())!
-        )
+        if indexPath.section == 1 {
+            weatherCell.dateLabel.text  = Utility.stringFromDate(date: Calendar.current.date(byAdding: Calendar.Component.day, value: indexPath.row, to: Date())!
+            )
+        }else{
+            let diffInDays = Calendar.current.dateComponents([.day], from: Date(), to:Calendar.current.date(byAdding:Calendar.Component.day,value:indexPath.row, to: Date())!).day
+            
+            var dayString = "";
+            switch diffInDays {
+            case 1:
+                dayString = "Tomorrow"
+                break
+            case 0:
+            dayString = "Today"
+            break
+            case 2:
+            dayString = "Day After Tomorrow"
+            break
+            default:
+                break
+            }
+            weatherCell.dateLabel.text = dayString
+
+        }
         let vm = self.weatherListViewModel.sourceViewModels[indexPath.row]
         weatherCell.summaryLabel.text = vm.icon
         weatherCell.temperatureLabel.text = NSString.init(format: "%.2f/%.2f °F",vm.temperatureLow,vm.temperatureHigh ) as String
@@ -106,13 +139,31 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
     }
     
     func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
-        return nil;
+        if section == 1 {
+            return nil
+        }else{
+            let headerVIew = UIView.init(frame: CGRect(x:0,y:0,width:tableView.frame.size.width,height:40))
+            headerVIew.backgroundColor = containerView.backgroundColor;
+            let moreActionButton = UIButton.init(frame: CGRect(x:0,y:0,width:120,height:40))
+            moreActionButton.addTarget(self, action: #selector(moreActionButtonPressed), for: .touchUpInside)
+            moreActionButton.setTitleColor(headerLabel.textColor, for: .normal)
+            if(!isMorePressed){
+                moreActionButton.setTitle("Show more", for: .normal)
+            }else{
+                moreActionButton.setTitle("Show less", for: .normal)
+            }
+            headerVIew.addSubview(moreActionButton)
+            return headerVIew
+        }
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        return nil
+        return nil;
     }
     func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        if section == 0 {
+            return 40;
+        }
         return 0.01;
     }
     
@@ -120,12 +171,32 @@ class ViewController: UIViewController,UITableViewDelegate,UITableViewDataSource
         return 0.01;
     }
     
-    func stringFromDate(date : Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let myString = formatter.string(from: date)
-        return myString
+    func numberOfSections(in tableView: UITableView) -> Int {
+        if isMorePressed {
+            return 2;
+        }else{
+            return 1;
+        }
     }
+    //MARK:- ButtonAction
+    
+    @objc func moreActionButtonPressed(sender:UIButton)  {
+        if !isMorePressed {
+            isMorePressed = true
+            self.weatherTableView.beginUpdates();
+            self.weatherTableView.insertSections(NSIndexSet.init(index: 1) as IndexSet, with: .bottom)
+            self.weatherTableView.endUpdates();
+            sender.setTitle("Show less", for: .normal)
+            
+        }else{
+            isMorePressed = false
+            self.weatherTableView.beginUpdates();
+            self.weatherTableView.deleteSections(NSIndexSet.init(index: 1) as IndexSet, with: .top)
+            self.weatherTableView.endUpdates();
+            sender.setTitle("Show more", for: .normal)
+        }
+    }
+
 
 
 }

@@ -15,16 +15,6 @@ class WeatherViewModel: NSObject {
     var temperatureHigh :Double
     var temperatureLow :Double
 
-    
-//    init(date :Date, summary: String, icon: String, temperatureHigh: Double, temperatureLow:Double ) {
-//        self.date = date
-//        self.summary = summary
-//        self.icon = icon
-//        self.temperatureHigh = temperatureHigh
-//        self.temperatureLow = temperatureLow
-//
-//    }
-    
     init(weather :WeatherModel) {
 
         self.date = weather.date

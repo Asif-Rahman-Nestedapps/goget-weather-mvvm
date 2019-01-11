@@ -18,5 +18,12 @@ class Utility: NSObject {
    class func hideProgressView(view:UIView){
         MBProgressHUD.hide(for: view, animated: true);
     }
+    //MARK: - StringGenerateFromDate
+   class func stringFromDate(date : Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let myString = formatter.string(from: date)
+        return myString
+    }
 
 }
